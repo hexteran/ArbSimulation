@@ -1,5 +1,6 @@
 #include "csv_io.hpp"
 #include "simulation.hpp"
+#include "strategy.hpp"
 
 int main(int argc, char* argv[])
 {

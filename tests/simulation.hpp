@@ -1,6 +1,7 @@
 #include "definitions.h"
 #include "../src/simulation.hpp"
-/*TEST(Simulation, DataManagerTest)
+
+TEST(Simulation, DataManagerTest)
 {
     using namespace ArbSimulation;
 
@@ -36,7 +37,7 @@
     
     EXPECT_TRUE(sub->IsOk);
     EXPECT_TRUE(sub->IsAPresent && sub->IsBPresent);
-}//*/
+}
 
 TEST(Simulation, OrderMatcherTest_OneInstrument)
 {
@@ -44,14 +45,16 @@ TEST(Simulation, OrderMatcherTest_OneInstrument)
 
     struct MockStrategy: public Subscriber
     {
+        std::vector<OrderPtr> ordersSent;
+        std::vector<OrderPtr> ordersConfirmed;
         InstrumentManager* manager;
         OrderMatcher* matcher;
         u_int64_t Timestamp = 0;
         bool isFirstOrderSent = false;
         void OnNewMessage(MessagePtr message) final
         {
-            if ((message->Type != MessageType::L1Update && !isFirstOrderSent) 
-            || message->Type != MessageType::OrderFilled)
+            if ((message->Type == MessageType::L1Update && !isFirstOrderSent) 
+            || message->Type == MessageType::OrderFilled)
             {
                 isFirstOrderSent = true;
                 auto newOrder = std::make_shared<Order>();
@@ -60,22 +63,112 @@ TEST(Simulation, OrderMatcherTest_OneInstrument)
                     std::static_pointer_cast<MDUpdateMessage>(message)->Update->Instrument:
                     std::static_pointer_cast<OrderFilledMessage>(message)->Order->Instrument;
                 newOrder->Qty = 1;
-                newOrder->Side = OrderSide::Buy;
+                newOrder->Side = OrderSide::Sell;
                 isFirstOrderSent = true;
                 matcher->SendOrder(newOrder);
+                ordersSent.push_back(newOrder);
             }
         }
     };
-    auto matcher = std::make_shared<OrderMatcher>(4);
+    std::unordered_map<std::string, int> latencies({{"FutureA", 4}, {"FutureB", 4}});
+    auto matcher = std::make_shared<OrderMatcher>(latencies);
     auto instrManager = std::make_shared<InstrumentManager>();
     auto sub = std::make_shared<MockStrategy>();
     sub->matcher = matcher.get();
     sub->manager = instrManager.get();
     MarketDataSimulationManager manager{instrManager, {"../../tests/data/order_matcher_test_1.csv"}};
+    
     manager.AddSubscriber(matcher);
+    matcher->AddSubscriber(sub);
     manager.AddSubscriber(sub);
+    
     while(manager.Step());
 
-    EXPECT_TRUE(1==1);
-    //EXPECT_TRUE(sub->IsAPresent && sub->IsBPresent);
+    EXPECT_EQ(sub->ordersSent.size(), 7);
+    EXPECT_EQ(sub->ordersSent[0]->ExecPrice, 998);
+}
+
+TEST(Simulation, OrderMatcherTest_TwoInstruments)
+{
+    using namespace ArbSimulation;
+    struct MockStrategy: public Subscriber
+    {
+        std::vector<OrderPtr> ordersSent;
+        InstrumentManager* manager;
+        OrderMatcher* matcher;
+        u_int64_t Timestamp = 0;
+        bool isFirstOrderSent = false;
+        bool IsAWarmedUp = false;
+        bool IsBWarmedUp = false;
+
+        bool IsAOrderOnTheWay = false;
+        bool IsBOrderOnTheWay = false;
+        void OnNewMessage(MessagePtr message) final
+        {
+            if (message->Type == MessageType::L1Update)
+            {
+                const std::string& secId = std::static_pointer_cast<MDUpdateMessage>(message)->Update->Instrument->SecurityId;
+                if (secId == "FutureA")
+                    IsAWarmedUp = true;
+                if (secId == "FutureB")
+                    IsBWarmedUp = true;
+            };
+
+            if (message->Type == MessageType::OrderFilled)
+            {
+                const std::string& secId = std::static_pointer_cast<OrderFilledMessage>(message)->Order->Instrument->SecurityId;
+                if (secId == "FutureA")
+                    IsAOrderOnTheWay = false;
+                if (secId == "FutureB")
+                    IsBOrderOnTheWay = false;
+            }
+
+            if (IsAWarmedUp && IsBWarmedUp && !IsAOrderOnTheWay && !IsBOrderOnTheWay)
+                if ((message->Type == MessageType::L1Update && !isFirstOrderSent) 
+                || message->Type == MessageType::OrderFilled)
+                {
+                    isFirstOrderSent = true;
+                    auto newOrderA = std::make_shared<Order>();
+                    newOrderA->Instrument = manager->GetOrCreateInstrument("FutureA");
+                    newOrderA->Qty = 1;
+                    newOrderA->Side = OrderSide::Sell;
+                    matcher->SendOrder(newOrderA);
+                    ordersSent.push_back(newOrderA);
+                    IsAOrderOnTheWay = true;
+
+                    auto newOrderB = std::make_shared<Order>();
+                    newOrderB->Instrument = manager->GetOrCreateInstrument("FutureB");
+                    newOrderB->Qty = 1;
+                    newOrderB->Side = OrderSide::Buy;
+                    matcher->SendOrder(newOrderB);
+                    ordersSent.push_back(newOrderB);
+                    IsBOrderOnTheWay = true;
+                }   
+        }
+    };
+    
+    std::unordered_map<std::string, int> latencies({{"FutureA", 4}, {"FutureB", 4}});
+    auto matcher = std::make_shared<OrderMatcher>(latencies);
+    auto instrManager = std::make_shared<InstrumentManager>();
+    auto sub = std::make_shared<MockStrategy>();
+    sub->matcher = matcher.get();
+    sub->manager = instrManager.get();
+    MarketDataSimulationManager manager{instrManager, {"../../tests/data/order_matcher_test_1.csv", "../../tests/data/order_matcher_test_2.csv"}};
+    
+    manager.AddSubscriber(matcher);
+    matcher->AddSubscriber(sub);
+    manager.AddSubscriber(sub);
+    
+    while(manager.Step());
+    int k = 1;
+    EXPECT_EQ(sub->ordersSent.size(), 12);
+    
+    std::vector<double> prices{998, 1023, 997, 1023, 996, 1053, 990, 1056, 1000, 1052, 1001};
+    std::vector<double> timestamps{1, 1, 7, 7, 13, 13, 19, 19, 25, 25, 31};
+    
+    for (int i = 0; i < prices.size(); ++i)
+    {
+        EXPECT_EQ(prices[i], sub->ordersSent[i]->ExecPrice);
+        EXPECT_EQ(timestamps[i], sub->ordersSent[i]->SentTimestamp);
+    }
 }

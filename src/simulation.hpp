@@ -7,6 +7,7 @@ namespace ArbSimulation
     struct Instrument
     {
         std::string SecurityId;
+        double PriceStep = 1;
     };
     typedef std::shared_ptr<Instrument> InstrumentPtr; 
 
@@ -33,7 +34,7 @@ namespace ArbSimulation
     class InstrumentManager
     {
     public:         
-        InstrumentPtr GetOrCreateInstrument(std::string securityId)
+        InstrumentPtr GetOrCreateInstrument(const std::string& securityId)
         {
             auto iter = _instruments.find(securityId);
             if (iter == _instruments.end())
@@ -98,7 +99,7 @@ namespace ArbSimulation
         inline void _sortData()
         {
             //Quite time consuming, but this application is not latency-sensitive
-            std::sort(_data.begin(), _data.end(), [](L1UpdatePtr& a, L1UpdatePtr& b){ return a->Timestamp > b->Timestamp;});
+            std::sort(_data.begin(), _data.end(), [](L1UpdatePtr& a, L1UpdatePtr& b){ return a->Timestamp < b->Timestamp;});
         }
 
     private:
@@ -120,7 +121,7 @@ namespace ArbSimulation
         double Qty;
         OrderSide Side;
         double ExecPrice = 0;
-        u_int64_t SendedTimestamp = 0;
+        u_int64_t SentTimestamp = 0;
         u_int64_t ExecutedTimestamp = 0;
     };
 
@@ -138,7 +139,7 @@ namespace ArbSimulation
     class OrderMatcher: public Subscriber, public Publisher
     {
     public:
-        OrderMatcher(int latency): _latency(latency)
+        OrderMatcher(const std::unordered_map<std::string, int>& latencies): _latencies(latencies)
         {
         }
 
@@ -146,7 +147,10 @@ namespace ArbSimulation
         {
             //putting orders into the queue in order to check on upcoming md updates
             std::string& securityId = order->Instrument->SecurityId;
+            order->SentTimestamp = _currentTimestamp;
+
             auto iter = _orderQueues.find(securityId);
+        
             if (iter == _orderQueues.end())
             {
                 _orderQueues.insert({securityId, std::queue<OrderPtr>{}});
@@ -158,33 +162,37 @@ namespace ArbSimulation
 
         void OnNewMessage(MessagePtr message)
         {
-            //we should get only MDUpdates, any other message type is restricted
+            //we should get only MDUpdates, any other message types are restricted
             if (message->Type != MessageType::L1Update)
                 throw Exception("Wrong MessageType");
 
             auto update = std::static_pointer_cast<MDUpdateMessage>(message)->Update;
+            _currentTimestamp = update->Timestamp;
             std::string& securityId = update->Instrument->SecurityId;
 
             auto iterUpdates = _lastUpdates.find(securityId);
-            if (iterUpdates == _lastUpdates.end())
-                throw Exception("No previous updates for the instrument" + securityId);
 
             auto iterQueues = _orderQueues.find(securityId);
-            while (iterQueues != _orderQueues.end() && iterQueues->second.front()->SendedTimestamp + _latency < update->Timestamp)
+            if (iterQueues != _orderQueues.end() && iterUpdates != _lastUpdates.end())
             {
-                auto message = std::make_shared<OrderFilledMessage>();
-                message->Order = iterQueues->second.front();
-                message->Order->ExecPrice = message->Order->Side == OrderSide::Buy ? iterUpdates->second->AskPrice : iterUpdates->second->BidPrice;
-                message->Order->ExecutedTimestamp = message->Order->ExecutedTimestamp + _latency; 
-                iterQueues->second.pop();
-                SendMessage(message);
+                while (!iterQueues->second.empty() && iterQueues->second.front()->SentTimestamp + _latencies[securityId] < update->Timestamp)
+                {
+                    auto message = std::make_shared<OrderFilledMessage>();
+                    message->Order = iterQueues->second.front();
+                    message->Order->ExecPrice = message->Order->Side == OrderSide::Buy ? iterUpdates->second->AskPrice : iterUpdates->second->BidPrice;
+                    message->Order->ExecutedTimestamp = iterQueues->second.front()->SentTimestamp + _latencies[securityId];//iterUpdates->second->Timestamp;
+                    iterQueues->second.pop();
+                    SendMessage(message);
+                }
             }
             _lastUpdates[securityId] = update;
         }
 
     private:
+        int _currentTimestamp{0};
         std::unordered_map<std::string, std::queue<OrderPtr>> _orderQueues;
         std::unordered_map<std::string, L1UpdatePtr> _lastUpdates;
+        std::unordered_map<std::string, int> _latencies;
         int _latency{0};
     };
 }
