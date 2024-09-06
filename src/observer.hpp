@@ -8,6 +8,7 @@ namespace ArbSimulation
     enum class MessageType
     {
         L1Update,
+        NewOrder,
         OrderFilled
     };
 

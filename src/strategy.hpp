@@ -1,3 +1,4 @@
+#pragma once
 #include "simulation.hpp"
 
 namespace ArbSimulation
@@ -5,20 +6,36 @@ namespace ArbSimulation
     class Position
     {
     public:
-        inline double GetNetQty()
+        inline double GetNetQty() const
         {
             return _netQty;
         }
 
-        inline double GetPnL()
+        inline double GetPnL() const 
         {
-            return _unrealizedPnL + _realizedPnL;
+            /*
+            * This implementation differs from what was described in the doc
+            * But meaning is the same: unrealized pnl + realized pnl
+            */
+            if (_netQty >= 0)
+            {
+                if (_qtyBought == 0)   
+                    return 0;
+                double avgPriceSold = _avgPriceSold * _qtySold / (_qtySold + _netQty) + _currentPrice * _netQty / (_qtySold + _netQty);
+                return  std::round((avgPriceSold - _avgPriceBought)*std::max(_qtySold, _qtyBought)*MAX_PRECISION/MAX_PRECISION);
+            }
+            else
+            {
+                if (_qtySold == 0)   
+                    return 0;
+                double avgPriceBought = _avgPriceBought * _qtyBought / _qtySold + _currentPrice * (-_netQty) / _qtySold;
+                return  std::round((_avgPriceSold - avgPriceBought)*std::max(_qtySold, _qtyBought)*MAX_PRECISION/MAX_PRECISION);
+            }
         }
 
-        void OnNewCurrentPrice(double price)
+        inline void OnNewCurrentPrice(double price)
         {
             _currentPrice = price;
-            _unrealizedPnL = _calcUnrealizedPnL();
         }
 
         void OnNewTrade(double qty, double price, OrderSide side)
@@ -41,65 +58,39 @@ namespace ArbSimulation
                     throw Exception("Wrong value");
             }
             _netQty = _qtyBought - _qtySold;
-            _unrealizedPnL = _calcUnrealizedPnL();
-            _realizedPnL = _calcRealizedPnL();
-        }
-
-    private:
-        inline double _calcUnrealizedPnL()
-        {
-            double result = _netQty > 0 ?
-                _currentPrice * _netQty / _qtyBought + _avgPriceSold * _qtySold / _qtyBought:
-                -_currentPrice * _netQty / _qtySold + _avgPriceSold * _qtyBought / _qtySold;
-        }
-
-        inline double _calcRealizedPnL()
-        {
-            return (_avgPriceSold - _avgPriceBought)*std::min(_qtyBought, _qtySold);
         }
 
     private:
         double _qtyBought = 0;
         double _qtySold = 0;
-        double _unrealizedPnL = 0;
-        double _realizedPnL = 0;
         double _netQty = 0;
         double _avgPriceBought = 0;
         double _avgPriceSold = 0;
-        double _pnl = 0;
         double _currentPrice = 0;
+        
     };
 
-    class PositionKeeper: public Subscriber
+    class PositionKeeper
     {
     public:
-        PositionKeeper(std::shared_ptr<InstrumentManager> instrManager): 
-        _instrumentManager(instrManager)
-        {}
+        inline const Position& GetPosition(const std::string& securityId)
+        {
+            if (_positionsMap.find(securityId) == _positionsMap.end())
+                _positionsMap.insert({securityId, Position()});
 
-        void OnL1Update(L1UpdatePtr update)
+            return _positionsMap[securityId];
+        }
+
+        inline void OnL1Update(L1UpdatePtr update)
         {
             const std::string& secId = update->Instrument->SecurityId;
-            double priceStep = update->Instrument->PriceStep;
-            auto iter = _positionsMap.find(secId);
-            if (iter != _positionsMap.end())
-                iter->second.back().OnNewCurrentPrice((update->BidPrice + update->AskPrice)/2);
+            _getOrCreatePosition(secId).OnNewCurrentPrice((update->BidPrice + update->AskPrice)/2);
         };
 
-        void OnOrderFilled(OrderPtr order)
+        inline void OnOrderFilled(OrderPtr order)
         {
             const std::string& secId = order->Instrument->SecurityId;
-            auto iter = _positionsMap.find(secId);
-            if (iter == _positionsMap.end())
-            {
-                _positionsMap.insert({secId, std::vector<Position>()});
-            }
-
-            auto& positionsOnInstr = _positionsMap[secId];
-            if (positionsOnInstr.empty() || positionsOnInstr.back().GetNetQty() == 0)
-                positionsOnInstr.push_back(Position());
-            
-            positionsOnInstr.back().OnNewTrade(order->Qty, order->ExecPrice, order->Side);
+            _getOrCreatePosition(secId).OnNewTrade(order->Qty, order->ExecPrice, order->Side);
         };
 
         void OnNewMessage(MessagePtr message)
@@ -118,18 +109,63 @@ namespace ArbSimulation
                 }
             }
         }
+    private:
+        Position& _getOrCreatePosition(const std::string& securityId)
+        {
+            auto iter = _positionsMap.find(securityId);
+            if (iter == _positionsMap.end())
+            {
+                _positionsMap.insert({securityId, Position()});
+                return _positionsMap[securityId];
+            }
+            return iter->second;
+        }
 
     private:
-        std::shared_ptr<InstrumentManager> _instrumentManager;
-        std::unordered_map<std::string, std::vector<Position>> _positionsMap;
+        std::unordered_map<std::string, Position> _positionsMap;
     };
 
-    class BasicStrategy: public Subscriber
+    class BasicStrategy: public Subscriber, public Publisher
     {
     public:
-        virtual void OnL1Update(L1UpdatePtr update) = 0;
+        BasicStrategy(std::shared_ptr<InstrumentManager> instrManager):_instrManager(instrManager)
+        {}
 
+        virtual void OnL1Update(L1UpdatePtr update) = 0;
         virtual void OnOrderFilled(OrderPtr order) = 0;
+
+        void SendSL(const std::string& securityId)
+        {
+            auto& position = _positionKeeper.GetPosition(securityId);
+            auto order = std::make_shared<Order>();
+            order->Qty = std::abs(position.GetNetQty());
+            order->Side = position.GetNetQty() > 0 ? OrderSide::Sell: OrderSide::Buy;
+            order->Type = OrderType::StopLoss;
+            order->Instrument = _instrManager->GetOrCreateInstrument(securityId);
+            if (order->Qty > 0)
+            {
+                auto message = std::make_shared<NewOrderMessage>();
+                message->Order = order;
+                SendMessage(message);
+            }
+        }
+
+        void SendMarketOrder(const std::string& securityId, double qty, OrderSide side)
+        {
+            auto order = std::make_shared<Order>();
+            order->Qty = qty;
+            order->Side = side;
+            order->Type = OrderType::Market;
+            order->Instrument = _instrManager->GetOrCreateInstrument(securityId);
+            auto message = std::make_shared<NewOrderMessage>();
+            message->Order = order;
+            SendMessage(message);
+        }
+
+        inline const Position& GetPosition(const std::string& securityId)
+        {
+            return _positionKeeper.GetPosition(securityId);
+        }
 
         void OnNewMessage(MessagePtr message)
         {
@@ -137,15 +173,23 @@ namespace ArbSimulation
             {
                 case (MessageType::L1Update):
                 {
+                    _positionKeeper.OnL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
                     OnL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
                     break;
                 }
                 case (MessageType::OrderFilled):
                 {
+                    _positionKeeper.OnOrderFilled(std::static_pointer_cast<OrderFilledMessage>(message)->Order);
                     OnOrderFilled(std::static_pointer_cast<OrderFilledMessage>(message)->Order);
                     break;
                 }
+                default:
+                    throw Exception("Unexpected MessageType");
             }
         }
+
+    private:
+        std::shared_ptr<InstrumentManager> _instrManager;
+        PositionKeeper _positionKeeper;
     };
 }

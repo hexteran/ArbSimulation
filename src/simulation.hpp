@@ -47,7 +47,7 @@ namespace ArbSimulation
             return iter->second;
         }
 
-    //private:
+    private:
         std::unordered_map<std::string, InstrumentPtr> _instruments;
     };
 
@@ -56,6 +56,7 @@ namespace ArbSimulation
     public:
         MarketDataSimulationManager();
         MarketDataSimulationManager(MarketDataSimulationManager&&) = delete;
+        MarketDataSimulationManager(MarketDataSimulationManager&) = delete;
         MarketDataSimulationManager(const MarketDataSimulationManager&) = delete;
         MarketDataSimulationManager(std::shared_ptr<InstrumentManager> instrManager, std::vector<std::string> paths):
         _instrumentManager(instrManager)
@@ -115,6 +116,12 @@ namespace ArbSimulation
         Sell
     };
 
+    enum class OrderType
+    {
+        Market,
+        StopLoss
+    };
+
     struct Order
     {
         InstrumentPtr Instrument;
@@ -123,9 +130,19 @@ namespace ArbSimulation
         double ExecPrice = 0;
         u_int64_t SentTimestamp = 0;
         u_int64_t ExecutedTimestamp = 0;
+        OrderType Type = OrderType::Market;
     };
 
     typedef std::shared_ptr<Order> OrderPtr;
+
+    struct NewOrderMessage: public Message
+    {
+        OrderPtr Order;
+        NewOrderMessage()
+        {
+            Type = MessageType::NewOrder;
+        }
+    };
 
     struct OrderFilledMessage: public Message
     {
@@ -139,11 +156,16 @@ namespace ArbSimulation
     class OrderMatcher: public Subscriber, public Publisher
     {
     public:
+        OrderMatcher() = delete;
+        OrderMatcher(OrderMatcher&) = delete;
+        OrderMatcher(const OrderMatcher&) = delete;
+        OrderMatcher(OrderMatcher&&) = delete;
+
         OrderMatcher(const std::unordered_map<std::string, int>& latencies): _latencies(latencies)
         {
         }
 
-        inline void SendOrder(OrderPtr order)
+        void ProcessNewOrder(OrderPtr order)
         {
             //putting orders into the queue in order to check on upcoming md updates
             std::string& securityId = order->Instrument->SecurityId;
@@ -160,15 +182,10 @@ namespace ArbSimulation
                 iter->second.push(order);
         }
 
-        void OnNewMessage(MessagePtr message)
+        void ProcessL1Update(L1UpdatePtr update)
         {
-            //we should get only MDUpdates, any other message types are restricted
-            if (message->Type != MessageType::L1Update)
-                throw Exception("Wrong MessageType");
-
-            auto update = std::static_pointer_cast<MDUpdateMessage>(message)->Update;
             _currentTimestamp = update->Timestamp;
-            std::string& securityId = update->Instrument->SecurityId;
+            std::string &securityId = update->Instrument->SecurityId;
 
             auto iterUpdates = _lastUpdates.find(securityId);
 
@@ -179,13 +196,38 @@ namespace ArbSimulation
                 {
                     auto message = std::make_shared<OrderFilledMessage>();
                     message->Order = iterQueues->second.front();
-                    message->Order->ExecPrice = message->Order->Side == OrderSide::Buy ? iterUpdates->second->AskPrice : iterUpdates->second->BidPrice;
-                    message->Order->ExecutedTimestamp = iterQueues->second.front()->SentTimestamp + _latencies[securityId];//iterUpdates->second->Timestamp;
+                    double execPrice = message->Order->Side == OrderSide::Buy ? iterUpdates->second->AskPrice : iterUpdates->second->BidPrice;
+                    if (message->Order->Type == OrderType::StopLoss)
+                        execPrice = (iterUpdates->second->AskPrice + iterUpdates->second->BidPrice) / 2;
+
+                    message->Order->ExecPrice = execPrice;
+                    message->Order->ExecutedTimestamp = iterQueues->second.front()->SentTimestamp + _latencies[securityId]; // iterUpdates->second->Timestamp;
                     iterQueues->second.pop();
                     SendMessage(message);
                 }
             }
             _lastUpdates[securityId] = update;
+        }
+
+        void OnNewMessage(MessagePtr message)
+        {
+            //we should get only MDUpdates, any other message types are restricted
+            switch(message->Type)
+            {
+                case MessageType::L1Update:
+                {
+                    ProcessL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
+                    break;
+                }
+                case MessageType::NewOrder:
+                {
+                    ProcessNewOrder(std::static_pointer_cast<NewOrderMessage>(message)->Order);
+                    break;
+                }
+                default:
+                    throw Exception("Unexpected MessageType");
+                
+            }
         }
 
     private:

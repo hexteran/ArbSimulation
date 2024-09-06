@@ -65,7 +65,7 @@ TEST(Simulation, OrderMatcherTest_OneInstrument)
                 newOrder->Qty = 1;
                 newOrder->Side = OrderSide::Sell;
                 isFirstOrderSent = true;
-                matcher->SendOrder(newOrder);
+                matcher->ProcessNewOrder(newOrder);
                 ordersSent.push_back(newOrder);
             }
         }
@@ -132,7 +132,7 @@ TEST(Simulation, OrderMatcherTest_TwoInstruments)
                     newOrderA->Instrument = manager->GetOrCreateInstrument("FutureA");
                     newOrderA->Qty = 1;
                     newOrderA->Side = OrderSide::Sell;
-                    matcher->SendOrder(newOrderA);
+                    matcher->ProcessNewOrder(newOrderA);
                     ordersSent.push_back(newOrderA);
                     IsAOrderOnTheWay = true;
 
@@ -140,7 +140,7 @@ TEST(Simulation, OrderMatcherTest_TwoInstruments)
                     newOrderB->Instrument = manager->GetOrCreateInstrument("FutureB");
                     newOrderB->Qty = 1;
                     newOrderB->Side = OrderSide::Buy;
-                    matcher->SendOrder(newOrderB);
+                    matcher->ProcessNewOrder(newOrderB);
                     ordersSent.push_back(newOrderB);
                     IsBOrderOnTheWay = true;
                 }   

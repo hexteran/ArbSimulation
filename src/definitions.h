@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 #include <initializer_list>
 #include <unordered_map>
@@ -10,4 +11,9 @@
 #include <queue>
 #include <stdexcept>
 #include <map>
-#define DEFINITIONS
+#include <cmath>
+
+namespace ArbSimulation
+{
+    constexpr double MAX_PRECISION = 0.00000001;
+}
