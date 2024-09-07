@@ -70,7 +70,7 @@ TEST(Simulation, OrderMatcherTest_OneInstrument)
             }
         }
     };
-    std::unordered_map<std::string, int> latencies({{"FutureA", 4}, {"FutureB", 4}});
+    std::unordered_map<std::string, u_int64_t> latencies({{"FutureA", 4}, {"FutureB", 4}});
     auto matcher = std::make_shared<OrderMatcher>(latencies);
     auto instrManager = std::make_shared<InstrumentManager>();
     auto sub = std::make_shared<MockStrategy>();
@@ -147,7 +147,7 @@ TEST(Simulation, OrderMatcherTest_TwoInstruments)
         }
     };
     
-    std::unordered_map<std::string, int> latencies({{"FutureA", 4}, {"FutureB", 4}});
+    std::unordered_map<std::string, u_int64_t> latencies({{"FutureA", 4}, {"FutureB", 4}});
     auto matcher = std::make_shared<OrderMatcher>(latencies);
     auto instrManager = std::make_shared<InstrumentManager>();
     auto sub = std::make_shared<MockStrategy>();
@@ -170,5 +170,6 @@ TEST(Simulation, OrderMatcherTest_TwoInstruments)
     {
         EXPECT_EQ(prices[i], sub->ordersSent[i]->ExecPrice);
         EXPECT_EQ(timestamps[i], sub->ordersSent[i]->SentTimestamp);
+        EXPECT_EQ(timestamps[i] + 4, sub->ordersSent[i]->ExecutedTimestamp);
     }
 }

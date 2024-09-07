@@ -161,7 +161,7 @@ namespace ArbSimulation
         OrderMatcher(const OrderMatcher&) = delete;
         OrderMatcher(OrderMatcher&&) = delete;
 
-        OrderMatcher(const std::unordered_map<std::string, int>& latencies): _latencies(latencies)
+        OrderMatcher(const std::unordered_map<std::string, u_int64_t>& latencies): _latencies(latencies)
         {
         }
 
@@ -225,16 +225,16 @@ namespace ArbSimulation
                     break;
                 }
                 default:
-                    throw Exception("Unexpected MessageType");
+                    throw MessagingError("Unexpected MessageType");
                 
             }
         }
 
     private:
-        int _currentTimestamp{0};
+        u_int64_t _currentTimestamp{0};
         std::unordered_map<std::string, std::queue<OrderPtr>> _orderQueues;
         std::unordered_map<std::string, L1UpdatePtr> _lastUpdates;
-        std::unordered_map<std::string, int> _latencies;
+        std::unordered_map<std::string, u_int64_t> _latencies;
         int _latency{0};
     };
 }

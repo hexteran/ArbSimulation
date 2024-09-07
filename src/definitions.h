@@ -11,6 +11,7 @@
 #include <queue>
 #include <stdexcept>
 #include <map>
+#include <algorithm>
 #include <cmath>
 
 namespace ArbSimulation

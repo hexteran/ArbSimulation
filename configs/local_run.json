@@ -1,0 +1,8 @@
+{
+	"X": 0.5,
+	"Y": 1,
+	"Z": -75,
+	"Latencies":{"FutureA":40000000, "FutureB":1000000},
+	"DataFiles":["/home/hexteran/Downloads/arbitrageFutureBData.csv", "/home/hexteran/Downloads/arbitrageFutureAData.csv"],
+	"Reports":"../../reports"
+}

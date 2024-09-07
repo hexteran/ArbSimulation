@@ -1,0 +1,8 @@
+{
+	"X": 5,
+	"Y": 2,
+	"Z": -10,
+	"Latencies":{"FutureA":0, "FutureB":0},
+	"DataFiles":["../../tests/data/arb_strategy_test_A.csv", "../../tests/data/arb_strategy_test_B.csv"],
+	"Reports":"../../reports"
+}

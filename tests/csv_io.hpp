@@ -1,7 +1,7 @@
 #include "definitions.h"
 #include "../src/csv_io.hpp"
 
-TEST(csv_io, read)
+TEST(CSVIO, Read)
 {
     using namespace ArbSimulation;
     auto result = CSVIO::ReadFile("../../tests/data/csv_io_test_case_1.csv");
@@ -17,4 +17,26 @@ TEST(csv_io, read)
     EXPECT_EQ(result[3][4], "10922");
     EXPECT_EQ(result[3][5], "10927");
     EXPECT_EQ(result[3][6], "3");
+}
+
+TEST(CSVIO, WriteRead)
+{
+    using namespace ArbSimulation;
+    std::vector<std::vector<std::string>> data{{"a", "b", "c"},{"d", "e", "g"}};
+    CSVIO::WriteFile("../../tests/data/csv_io_write_test_case_1.csv", data);
+
+    auto result = CSVIO::ReadFile("../../tests/data/csv_io_write_test_case_1.csv");
+    for (auto& line: result)
+        EXPECT_EQ(line.size(), 3);
+
+    EXPECT_EQ(result.size(), 2);
+
+    EXPECT_EQ(result[0][0], "a");
+    EXPECT_EQ(result[0][1], "b");
+    EXPECT_EQ(result[0][2], "c");
+    EXPECT_EQ(result[1][0], "d");
+    EXPECT_EQ(result[1][1], "e");
+    EXPECT_EQ(result[1][2], "g");
+
+    std::remove("../../tests/data/csv_io_write_test_case_1.csv"); 
 }

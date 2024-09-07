@@ -14,4 +14,24 @@ namespace ArbSimulation
             return _message.c_str();
         }
     };
+
+    class MessagingError : public Exception
+    {
+    public:
+        explicit MessagingError(const std::string &message) : Exception(message) {};
+    };
+
+    class CalculationError : public Exception
+    {
+    public:
+        explicit CalculationError(const std::string &message) : Exception(message) {};
+    };
+
+    class StrategyException : public Exception
+    {
+    public:
+        explicit StrategyException(const std::string &message) : Exception(message) {};
+    };
+
+
 }

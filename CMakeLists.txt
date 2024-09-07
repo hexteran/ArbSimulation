@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.5.0)
 project(Platform CXX)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-g")
+set(CMAKE_EXE_LINKER_FLAGS 
+          "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,/usr/local/lib")
 
 set(LD_LIBRARY_PATH /usr/local/lib)
 
@@ -19,15 +19,14 @@ FetchContent_Declare(
  
 FetchContent_MakeAvailable(simdjson)
 
-add_executable(ArbSimulation src/main.cpp)
-#add_executable(Tests tests/tests.cpp)
+#add_executable(ArbSimulation src/main.cpp)
+add_executable(Tests tests/tests.cpp)
 
-target_link_libraries(ArbSimulation PUBLIC simdjson)
-#target_link_libraries(Tests PUBLIC gtest)
-set(CMAKE_EXE_LINKER_FLAGS 
-          "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,/usr/local/lib")
-set_property(TARGET ArbSimulation PROPERTY CXX_STANDARD 20)
-#set_property(TARGET Tests PROPERTY CXX_STANDARD 20)
+#target_link_libraries(ArbSimulation PUBLIC simdjson)
+target_link_libraries(Tests PUBLIC gtest)
+
+#set_property(TARGET ArbSimulation PROPERTY CXX_STANDARD 20)
+set_property(TARGET Tests PROPERTY CXX_STANDARD 20)
 
 enable_testing()
 

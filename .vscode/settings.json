@@ -65,6 +65,11 @@
         "complex": "cpp",
         "shared_mutex": "cpp",
         "typeindex": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "charconv": "cpp",
+        "chrono": "cpp",
+        "format": "cpp"
     }
 }

@@ -14,22 +14,22 @@ namespace ArbSimulation
         inline double GetPnL() const 
         {
             /*
-            * This implementation differs from what was described in the doc
-            * But meaning is the same: unrealized pnl + realized pnl
+            * This implementation differs a bit from what was described in the doc
+            * But meaning is the same: function returns total pnl = unrealized pnl + realized pnl
             */
             if (_netQty >= 0)
             {
                 if (_qtyBought == 0)   
                     return 0;
                 double avgPriceSold = _avgPriceSold * _qtySold / (_qtySold + _netQty) + _currentPrice * _netQty / (_qtySold + _netQty);
-                return  std::round((avgPriceSold - _avgPriceBought)*std::max(_qtySold, _qtyBought)*MAX_PRECISION/MAX_PRECISION);
+                return  std::round((avgPriceSold - _avgPriceBought)*std::max(_qtySold, _qtyBought)/MAX_PRECISION)*MAX_PRECISION;
             }
             else
             {
                 if (_qtySold == 0)   
                     return 0;
                 double avgPriceBought = _avgPriceBought * _qtyBought / _qtySold + _currentPrice * (-_netQty) / _qtySold;
-                return  std::round((_avgPriceSold - avgPriceBought)*std::max(_qtySold, _qtyBought)*MAX_PRECISION/MAX_PRECISION);
+                return  std::round((_avgPriceSold - avgPriceBought)*std::max(_qtySold, _qtyBought)/MAX_PRECISION)*MAX_PRECISION;
             }
         }
 
@@ -55,7 +55,7 @@ namespace ArbSimulation
                     break;
                 }
                 default:
-                    throw Exception("Wrong value");
+                    throw CalculationError("Wrong OrderSide");
             }
             _netQty = _qtyBought - _qtySold;
         }
@@ -67,12 +67,29 @@ namespace ArbSimulation
         double _avgPriceBought = 0;
         double _avgPriceSold = 0;
         double _currentPrice = 0;
-        
     };
 
     class PositionKeeper
     {
     public:
+        inline void WriteTradesIntoFile(const std::string& path)
+        {
+
+        }
+
+        inline double GetFullPnL()
+        {
+            double result = 0;
+            for(auto& [key, value]: _positionsMap)
+                result += value.GetPnL();
+            return result;
+        }
+
+        inline const std::vector<OrderPtr>& GetTrades()
+        {
+            return _trades;
+        }
+
         inline const Position& GetPosition(const std::string& securityId)
         {
             if (_positionsMap.find(securityId) == _positionsMap.end())
@@ -89,6 +106,7 @@ namespace ArbSimulation
 
         inline void OnOrderFilled(OrderPtr order)
         {
+            _trades.push_back(order);
             const std::string& secId = order->Instrument->SecurityId;
             _getOrCreatePosition(secId).OnNewTrade(order->Qty, order->ExecPrice, order->Side);
         };
@@ -123,6 +141,7 @@ namespace ArbSimulation
 
     private:
         std::unordered_map<std::string, Position> _positionsMap;
+        std::vector<OrderPtr> _trades;
     };
 
     class BasicStrategy: public Subscriber, public Publisher
@@ -167,6 +186,16 @@ namespace ArbSimulation
             return _positionKeeper.GetPosition(securityId);
         }
 
+        inline double GetFullPnL()
+        {
+            return _positionKeeper.GetFullPnL();
+        }
+
+        inline const std::vector<OrderPtr>& GetTrades()
+        {
+            return _positionKeeper.GetTrades();
+        }
+
         void OnNewMessage(MessagePtr message)
         {
             switch(message->Type)
@@ -184,7 +213,7 @@ namespace ArbSimulation
                     break;
                 }
                 default:
-                    throw Exception("Unexpected MessageType");
+                    throw MessagingError("Unexpected MessageType");
             }
         }
 
