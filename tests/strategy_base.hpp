@@ -1,5 +1,5 @@
 #include "definitions.h"
-#include "../src/strategy.hpp"
+#include "../src/strategy_base.hpp"
 
 TEST(Strategy, Position_Long)
 {

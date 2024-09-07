@@ -1,5 +1,4 @@
-#pragma once
-#include "strategy.hpp"
+#include "strategy_base.hpp"
 
 namespace ArbSimulation
 {

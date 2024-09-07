@@ -1,24 +1,9 @@
-#pragma once
-#ifndef DEFINITIONS
-#include "definitions.h"
-#endif
+#pragma once 
+
+#include "DTO.hpp"
 
 namespace ArbSimulation
 {
-    enum class MessageType
-    {
-        L1Update,
-        NewOrder,
-        OrderFilled
-    };
-
-    struct Message
-    {
-        MessageType Type;    
-    };
-    
-    typedef std::shared_ptr<Message> MessagePtr;
-
     class Subscriber
     {
     public:

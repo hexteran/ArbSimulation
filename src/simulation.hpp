@@ -1,36 +1,10 @@
 #pragma once
-#include "csv_io.hpp"
+
 #include "observer.hpp"
+#include "csv_io.hpp"
 
 namespace ArbSimulation
 {
-    struct Instrument
-    {
-        std::string SecurityId;
-        double PriceStep = 1;
-    };
-    typedef std::shared_ptr<Instrument> InstrumentPtr; 
-
-    struct L1Update
-    {
-        u_int64_t Timestamp;
-        InstrumentPtr Instrument;
-        double BidSize;
-        double BidPrice;
-        double AskSize;
-        double AskPrice;
-    };
-    typedef std::shared_ptr<L1Update> L1UpdatePtr;
-
-    struct MDUpdateMessage: public Message
-    {
-        L1UpdatePtr Update;
-        MDUpdateMessage()
-        {
-            Type = MessageType::L1Update;
-        }
-    };
-
     class InstrumentManager
     {
     public:         
@@ -108,49 +82,6 @@ namespace ArbSimulation
         std::shared_ptr<InstrumentManager> _instrumentManager;
         int _cursor{0};
         int _size{0};
-    };
-
-    enum class OrderSide
-    {
-        Buy,
-        Sell
-    };
-
-    enum class OrderType
-    {
-        Market,
-        StopLoss
-    };
-
-    struct Order
-    {
-        InstrumentPtr Instrument;
-        double Qty;
-        OrderSide Side;
-        double ExecPrice = 0;
-        u_int64_t SentTimestamp = 0;
-        u_int64_t ExecutedTimestamp = 0;
-        OrderType Type = OrderType::Market;
-    };
-
-    typedef std::shared_ptr<Order> OrderPtr;
-
-    struct NewOrderMessage: public Message
-    {
-        OrderPtr Order;
-        NewOrderMessage()
-        {
-            Type = MessageType::NewOrder;
-        }
-    };
-
-    struct OrderFilledMessage: public Message
-    {
-        OrderPtr Order;
-        OrderFilledMessage()
-        {
-            Type = MessageType::OrderFilled;
-        }
     };
 
     class OrderMatcher: public Subscriber, public Publisher

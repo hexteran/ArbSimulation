@@ -19,14 +19,12 @@ FetchContent_Declare(
  
 FetchContent_MakeAvailable(simdjson)
 
-#add_executable(ArbSimulation src/main.cpp)
+add_executable(ArbSimulation src/main.cpp)
 add_executable(Tests tests/tests.cpp)
 
-#target_link_libraries(ArbSimulation PUBLIC simdjson)
+target_link_libraries(ArbSimulation PUBLIC simdjson)
 target_link_libraries(Tests PUBLIC gtest)
 
-#set_property(TARGET ArbSimulation PROPERTY CXX_STANDARD 20)
+set_property(TARGET ArbSimulation PROPERTY CXX_STANDARD 20)
 set_property(TARGET Tests PROPERTY CXX_STANDARD 20)
-
-enable_testing()
 

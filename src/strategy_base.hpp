@@ -1,4 +1,5 @@
 #pragma once
+
 #include "simulation.hpp"
 
 namespace ArbSimulation
