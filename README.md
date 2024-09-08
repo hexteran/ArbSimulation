@@ -4,7 +4,7 @@ Before building make sure that you have these two installed: <br>
   <code>GTest</code>
 
 <h2>Build</h2>
-Run following to build the solution:
+Run following to clone and build the solution:
 
   ````bash
 git clone https://github.com/hexteran/ArbSimulation &&
