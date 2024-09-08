@@ -27,8 +27,8 @@ won't find default config (unless it is specified explicitly as an argument)
 
 
 <h3>Configure simulation</h3>
-To run <code>./ArbSimulation</code> correctly you need to provide proper configuration file. You can find examples in <code>configs/</code>.
-If no arguments provided, <code>./ArbSimulation</code> uses <code>configs/default.json</code>. But you can specify the file you want to use.
+To run <code>./ArbSimulation</code> correctly you need to provide a proper configuration file. You can find examples in <code>configs/</code>.
+If no arguments are provided, <code>./ArbSimulation</code> uses <code>configs/default.json</code>. But you can specify the file you want to use.
 
 For instance:
 
