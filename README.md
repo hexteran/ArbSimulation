@@ -96,3 +96,14 @@ You can find some analysis of the results in <code>notebooks/</code>
 
 Latency is simulated for execution only.
 
+
+<h2>Number of hours</h2>
+I spent around 25 hours on this solution.
+
+ ````
+04.09 ~6 hours: planning and coding simulation.hpp
+05.09 ~5 hours: finalising simulation.hpp: testing, debugging; coding strategy.hpp
+06.09 ~5 hours: finalising strategy.hpp: testing, debugging; coding arbitrage.hpp
+07.09 ~5 hours: finalising arbitrage.hpp: testing, debugging; refactoring, analysis
+08.09 ~3 hours: documenting and uploading of the final version
+ ````
