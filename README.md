@@ -82,7 +82,7 @@ Simulation is done!
  ````
 
 > [!NOTE]  
-> If ReportsFolder was specified correctly, you'll see that the file with trades was generated
+> If ReportsFolder was specified correctly, you will find generated trades in this folder. 
 
 <h2>Architecture</h2>
 Architecture of this solution is described schematically on a diagram below.
