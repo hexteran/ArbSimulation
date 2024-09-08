@@ -73,11 +73,6 @@ namespace ArbSimulation
     class PositionKeeper
     {
     public:
-        inline void WriteTradesIntoFile(const std::string& path)
-        {
-
-        }
-
         inline double GetFullPnL()
         {
             double result = 0;
@@ -99,35 +94,19 @@ namespace ArbSimulation
             return _positionsMap[securityId];
         }
 
-        inline void OnL1Update(L1UpdatePtr update)
+        inline void ProcessL1Update(L1UpdatePtr update)
         {
             const std::string& secId = update->Instrument->SecurityId;
             _getOrCreatePosition(secId).OnNewCurrentPrice((update->BidPrice + update->AskPrice)/2);
         };
 
-        inline void OnOrderFilled(OrderPtr order)
+        inline void ProcessOrderFill(OrderPtr order)
         {
             _trades.push_back(order);
             const std::string& secId = order->Instrument->SecurityId;
             _getOrCreatePosition(secId).OnNewTrade(order->Qty, order->ExecPrice, order->Side);
         };
 
-        void OnNewMessage(MessagePtr message)
-        {
-            switch (message->Type)
-            {
-                case (MessageType::L1Update):
-                {
-                    OnL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
-                    break;
-                }
-                case (MessageType::OrderFilled):
-                {
-                    OnOrderFilled(std::static_pointer_cast<OrderFilledMessage>(message)->Order);
-                    break;
-                }
-            }
-        }
     private:
         Position& _getOrCreatePosition(const std::string& securityId)
         {
@@ -203,13 +182,13 @@ namespace ArbSimulation
             {
                 case (MessageType::L1Update):
                 {
-                    _positionKeeper.OnL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
+                    _positionKeeper.ProcessL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
                     OnL1Update(std::static_pointer_cast<MDUpdateMessage>(message)->Update);
                     break;
                 }
                 case (MessageType::OrderFilled):
                 {
-                    _positionKeeper.OnOrderFilled(std::static_pointer_cast<OrderFilledMessage>(message)->Order);
+                    _positionKeeper.ProcessOrderFill(std::static_pointer_cast<OrderFilledMessage>(message)->Order);
                     OnOrderFilled(std::static_pointer_cast<OrderFilledMessage>(message)->Order);
                     break;
                 }

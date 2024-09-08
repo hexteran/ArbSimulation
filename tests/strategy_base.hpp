@@ -1,7 +1,7 @@
-#include "definitions.h"
+#include <gtest/gtest.h>
 #include "../src/strategy_base.hpp"
 
-TEST(Strategy, Position_Long)
+TEST(strategy, Position_LongOpenClose)
 {
     using namespace ArbSimulation;
     Position position1;
@@ -24,7 +24,7 @@ TEST(Strategy, Position_Long)
     EXPECT_DOUBLE_EQ(position1.GetPnL(), 700);
 }
 
-TEST(Strategy, Position_Short)
+TEST(strategy, Position_ShortOpenClose)
 {
     using namespace ArbSimulation;
     Position position2;
@@ -47,7 +47,7 @@ TEST(Strategy, Position_Short)
     EXPECT_DOUBLE_EQ(position2.GetPnL(), -700);
 }
 
-TEST(Strategy, PositionKeeper_SingleInstrument)
+TEST(strategy, PositionKeeper_OneInstrumentTraded)
 {
     /*
     * Testing sequesnce of events:
@@ -62,7 +62,7 @@ TEST(Strategy, PositionKeeper_SingleInstrument)
     update->AskPrice = 111;
     update->BidPrice = 109;
     update->Instrument = instrument;
-    keeper.OnL1Update(update);
+    keeper.ProcessL1Update(update);
     auto& positionA = keeper.GetPosition("FutureA");
     EXPECT_EQ(positionA.GetNetQty(), 0);
     EXPECT_EQ(positionA.GetPnL(), 0);
@@ -72,64 +72,64 @@ TEST(Strategy, PositionKeeper_SingleInstrument)
     order->ExecPrice = 100;
     order->Qty = 1;
     order->Side = OrderSide::Buy;
-    keeper.OnOrderFilled(order);
+    keeper.ProcessOrderFill(order);
     EXPECT_EQ(positionA.GetNetQty(), 1);
     EXPECT_EQ(positionA.GetPnL(), 10);
 
     order->Qty = 3;
     order->ExecPrice = 120;
-    keeper.OnOrderFilled(order);
+    keeper.ProcessOrderFill(order);
     EXPECT_EQ(positionA.GetNetQty(), 4);
     EXPECT_EQ(positionA.GetPnL(), -20);
 
     update->AskPrice = 121;
     update->BidPrice = 119;
-    keeper.OnL1Update(update);
+    keeper.ProcessL1Update(update);
     EXPECT_EQ(positionA.GetNetQty(), 4);
     EXPECT_EQ(positionA.GetPnL(), 20);
 
     order->ExecPrice = 120;
     order->Qty = 4;
     order->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(order);
+    keeper.ProcessOrderFill(order);
     EXPECT_EQ(positionA.GetNetQty(), 0);
     EXPECT_EQ(positionA.GetPnL(), 20);
 
     update->AskPrice = 101;
     update->BidPrice = 99;
-    keeper.OnL1Update(update);
+    keeper.ProcessL1Update(update);
     EXPECT_EQ(positionA.GetNetQty(), 0);
     EXPECT_EQ(positionA.GetPnL(), 20);
     
     order->ExecPrice = 100;
     order->Qty = 4;
     order->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(order);
+    keeper.ProcessOrderFill(order);
     EXPECT_EQ(positionA.GetNetQty(), -4);
     EXPECT_EQ(positionA.GetPnL(), 20);
 
     update->AskPrice = 91;
     update->BidPrice = 89;
-    keeper.OnL1Update(update);
+    keeper.ProcessL1Update(update);
     EXPECT_EQ(positionA.GetNetQty(), -4);
     EXPECT_EQ(positionA.GetPnL(), 60);
 
     order->ExecPrice = 95;
     order->Qty = 4;
     order->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(order);
+    keeper.ProcessOrderFill(order);
     EXPECT_EQ(positionA.GetNetQty(), -8);
     EXPECT_EQ(positionA.GetPnL(), 80);
 
     order->ExecPrice = 89;
     order->Qty = 8;
     order->Side = OrderSide::Buy;
-    keeper.OnOrderFilled(order);
+    keeper.ProcessOrderFill(order);
     EXPECT_EQ(positionA.GetNetQty(), 0);
     EXPECT_EQ(positionA.GetPnL(), 88);
 }
 
-TEST(Strategy, PositionKeeper_TwoInstrumentsTest)
+TEST(strategy, PositionKeeper_TwoInstrumentsTraded)
 {
     /*
     * Testing sequesnce of events:
@@ -141,83 +141,67 @@ TEST(Strategy, PositionKeeper_TwoInstrumentsTest)
     auto instrumentA = manager.GetOrCreateInstrument("FutureA");
     auto instrumentB = manager.GetOrCreateInstrument("FutureB");
 
-    auto updateA = std::make_shared<L1Update>();
-    updateA->AskPrice = 111;
-    updateA->BidPrice = 109;
-    updateA->Instrument = instrumentA;
-
-    auto updateB = std::make_shared<L1Update>();
-    updateB->AskPrice = 111;
-    updateB->BidPrice = 109;
-    updateB->Instrument = instrumentB;
-
     auto orderA = std::make_shared<Order>();
     orderA->Instrument = instrumentA;
-    orderA->ExecPrice = 100;
-    orderA->Qty = 1;
-    orderA->Side = OrderSide::Buy;
 
     auto orderB = std::make_shared<Order>();
     orderB->Instrument = instrumentB;
-    orderB->ExecPrice = 100;
-    orderB->Qty = 1;
-    orderB->Side = OrderSide::Buy;
-///
+
     orderA->ExecPrice = 10927;
     orderA->SentTimestamp = 1544166008681726608;
     orderA->ExecutedTimestamp = 1544166008721726608;
     orderA->Qty = 1;
     orderA->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(orderA);
+    keeper.ProcessOrderFill(orderA);
 
     orderB->ExecPrice = 10924;
     orderB->SentTimestamp = 1544166008681726608;
     orderB->ExecutedTimestamp = 1544166008682726608;
     orderB->Qty = 1;
     orderB->Side = OrderSide::Buy;
-    keeper.OnOrderFilled(orderB);
+    keeper.ProcessOrderFill(orderB);
 
     orderB->ExecPrice = 10903;
     orderB->SentTimestamp = 1544166655470444660;
     orderB->ExecutedTimestamp = 1544166655471444660;
     orderB->Qty = 1;
     orderB->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(orderB);
+    keeper.ProcessOrderFill(orderB);
 
     orderA->ExecPrice = 10906;
     orderA->SentTimestamp = 1544166655470444660;
     orderA->ExecutedTimestamp = 1544166655510444660;
     orderA->Qty = 1;
     orderA->Side = OrderSide::Buy;
-    keeper.OnOrderFilled(orderA);
+    keeper.ProcessOrderFill(orderA);
 
     orderB->ExecPrice = 10871;
     orderB->SentTimestamp = 1544169548013367737;
     orderB->ExecutedTimestamp = 1544169548014367737;
     orderB->Qty = 1;
     orderB->Side = OrderSide::Buy;
-    keeper.OnOrderFilled(orderB);
+    keeper.ProcessOrderFill(orderB);
 
     orderA->ExecPrice = 10869.5;
     orderA->SentTimestamp = 1544169548013367737;
     orderA->ExecutedTimestamp = 1544169548053367737;
     orderA->Qty = 1;
     orderA->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(orderA);
+    keeper.ProcessOrderFill(orderA);
 
     orderB->ExecPrice = 10870;
     orderB->SentTimestamp = 1544195871070727486;
     orderB->ExecutedTimestamp = 1544195871071727486;
     orderB->Qty = 1;
     orderB->Side = OrderSide::Sell;
-    keeper.OnOrderFilled(orderB);
+    keeper.ProcessOrderFill(orderB);
 
     orderA->ExecPrice = 10871.0;
     orderA->SentTimestamp = 1544195871070727486;
     orderA->ExecutedTimestamp = 1544195871110727486;
     orderA->Qty = 1;
     orderA->Side = OrderSide::Buy;
-    keeper.OnOrderFilled(orderA);
+    keeper.ProcessOrderFill(orderA);
 
     auto pnl = keeper.GetFullPnL();
     EXPECT_EQ(pnl, -2.5);

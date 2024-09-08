@@ -1,8 +1,14 @@
-#include "definitions.h"
+#include <gtest/gtest.h>
 #include "../src/simulation.hpp"
 
-TEST(Simulation, DataManagerTest)
+TEST(simulation, MarketDataSimulationManager_PublishesCorrectData)
 {
+    /*
+    * Test verifies that MarketDataSimulationManager:
+    * 1) sends sorted data
+    * 2) sends all declared datasets
+    * 3) sends correct message
+    */
     using namespace ArbSimulation;
 
     struct MockSubscriber: public Subscriber
@@ -39,8 +45,14 @@ TEST(Simulation, DataManagerTest)
     EXPECT_TRUE(sub->IsAPresent && sub->IsBPresent);
 }
 
-TEST(Simulation, OrderMatcherTest_OneInstrument)
+TEST(simulation, OrderMatcher_OneInstrumentTraded)
 {
+    /*
+    * Test verifies that OrderMatcher:
+    * 1) matches orders as expected
+    * 2) sends back correct message
+    */
+
     using namespace ArbSimulation;
 
     struct MockStrategy: public Subscriber
@@ -88,8 +100,14 @@ TEST(Simulation, OrderMatcherTest_OneInstrument)
     EXPECT_EQ(sub->ordersSent[0]->ExecPrice, 998);
 }
 
-TEST(Simulation, OrderMatcherTest_TwoInstruments)
+TEST(simulation, OrderMatcher_TwoInstrumentsTraded)
 {
+    /*
+    * Test verifies that OrderMatcher:
+    * 1) matches orders as expected
+    * 2) sends back correct message
+    * 3) adds correct latency
+    */
     using namespace ArbSimulation;
     struct MockStrategy: public Subscriber
     {

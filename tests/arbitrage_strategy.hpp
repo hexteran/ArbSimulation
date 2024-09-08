@@ -1,8 +1,13 @@
 #pragma once
-#include "definitions.h"
+#include <gtest/gtest.h>
 #include "../src/arbitrage.hpp"
-TEST(ArbitrageStrategy, ShortRun)
+TEST(arbitrage, ArbitrageStrategy_Run)
 {
+    /*
+    * Test verifies that ArbitrageStrategy:
+    * 1) generates correct pnl
+    * 2) no exceptions are thrown during execution
+    */
     using namespace ArbSimulation;
     auto instrManager = std::make_shared<InstrumentManager>();
     std::vector<std::string> datasets{"../../tests/data/arb_strategy_test_A.csv", "../../tests/data/arb_strategy_test_B.csv"};

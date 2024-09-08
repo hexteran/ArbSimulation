@@ -1,7 +1,7 @@
-#include "definitions.h"
+#include <gtest/gtest.h>
 #include "../src/csv_io.hpp"
 
-TEST(CSVIO, Read)
+TEST(csv_io, CSVIO_Read)
 {
     using namespace ArbSimulation;
     auto result = CSVIO::ReadFile("../../tests/data/csv_io_test_case_1.csv");
@@ -19,7 +19,7 @@ TEST(CSVIO, Read)
     EXPECT_EQ(result[3][6], "3");
 }
 
-TEST(CSVIO, WriteRead)
+TEST(CSVIO, CSVIO_Write)
 {
     using namespace ArbSimulation;
     std::vector<std::vector<std::string>> data{{"a", "b", "c"},{"d", "e", "g"}};
