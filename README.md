@@ -1,7 +1,7 @@
 <h2>Dependencies</h2>
 Before building make sure that you have these two installed: <br>
   <code>CMake 3.5.0+</code>
-  <code>GTest</code>
+  <code>GTests</code>
 
 <h2>Build</h2>
 Run following to clone and build the solution:
