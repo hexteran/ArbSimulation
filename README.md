@@ -88,7 +88,7 @@ Simulation is done!
 Architecture of this solution is described schematically on a diagram below.
 
 <p align="center">
-  <img src="ArbSimulation.png" width="1000" title="hover text">
+  <img src="ArbSimulationFixed.png" width="1000" title="hover text">
 </p>
 
 <h2>Additionally</h2>
